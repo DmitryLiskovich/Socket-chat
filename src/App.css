@@ -37,12 +37,18 @@
 .messages-wrap{
 	display: flex;
 	align-items: flex-start;
-	justify-content: flex-end;
+	/* justify-content: flex-end; */
+	margin-top: auto;
 	flex-direction: column;
 	height: 80vh;
 	overflow-y: auto;
 	border: 1px solid #ddd;
 	padding: 10px;
+}
+
+.messages-wrap > :first-child {
+    margin-top: auto !important;
+    /* use !important to prevent breakage from child margin settings */
 }
 
 .disconect{
@@ -59,6 +65,10 @@
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
   }
+}
+
+input{
+	padding-left: 10px;
 }
 
 .App-header {
@@ -92,6 +102,7 @@
 	border: 1px solid #aaa;
 	border-radius: 4px;
 	background: #eee;
+	max-width: 80%;
 }
 p{
 	margin: 0;

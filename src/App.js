@@ -6,17 +6,39 @@ import './App.css';
 const socket = io.connect('http://10.20.5.7:8080');
 
 function App() {
-	const [messages, setMessage] = useState(JSON.parse(localStorage.getItem('messages')) || []);
+	const [messages, setMessage] = useState([]);
 	const [state, setState]= useState(false);
 	const [userName, setUserName] = useState('');
 	let input = '';
 	// localStorage.setItem('messages', JSON.stringify(messages));
 	const wrap = useRef(null);
+	const button = useRef(null);
+
+	useEffect(() => {
+		if(sessionStorage.getItem('chatInfo')){
+			const data = JSON.parse(sessionStorage.getItem('chatInfo'));
+			socket.emit('join', data.room, data.name);
+			setUserName(data.name);
+			setState(true);
+		}
+	}, []);
+
+	useEffect(() => {
+		if(wrap.current){
+			wrap.current.scrollTop = wrap.current.scrollHeight;
+		}
+	})
 
 	function init(e){
 		socket.emit('join', e.target.room.value, e.target.userName.value);
 		setUserName(e.target.userName.value)
 		setState(true);
+		sessionStorage.setItem('chatInfo', JSON.stringify({room: e.target.room.value, name: e.target.userName.value}));
+	}
+
+	function disconect(){
+		sessionStorage.removeItem('chatInfo');
+		setState(false);
 	}
 
 	if(!state){
@@ -36,11 +58,10 @@ function App() {
 		socket.send({input: input, id: userName});
 		setMessage([...messages, {message: input, id: `You`}]);
 		e.target.message.value = '';
-		wrap.current.scrollTo(0, wrap.current.offsetHeight);
+		button.current.focus();
 	}
 
 	socket.on('message', (data)=>{
-		wrap.current.scrollTo(0, wrap.current.offsetHeight);
 		if(typeof data == 'string'){
 			setMessage([...messages, {message: data, id: null}]);
 		}else{
@@ -70,9 +91,10 @@ function App() {
 			</div>
 			<div className='input'>
 				<form onSubmit={sendData}>
-					<input name='message' placeholder='message' onChange={(e)=> {input=e.target.value;}} type='text'></input>
+					<input ref={button} name='message' placeholder='message' onChange={(e)=> {input=e.target.value;}} type='text'></input>
 					<button type='submit'>Send</button>
 				</form>
+				<button className='disconect' onClick={disconect}>Disconnect</button>
 			</div>
 		</div>
 	);
