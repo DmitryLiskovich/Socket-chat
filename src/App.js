@@ -8,7 +8,7 @@ const socket = io.connect('http://10.20.5.7:8080');
 function App() {
 	const [messages, setMessage] = useState([]);
 	const [state, setState]= useState(false);
-	const [userName, setUserName] = useState('');
+	const [userName, setUserName] = useState({});
 	let input = '';
 	// localStorage.setItem('messages', JSON.stringify(messages));
 	const wrap = useRef(null);
@@ -18,20 +18,27 @@ function App() {
 		if(sessionStorage.getItem('chatInfo')){
 			const data = JSON.parse(sessionStorage.getItem('chatInfo'));
 			socket.emit('join', data.room, data.name);
-			setUserName(data.name);
+			setUserName({name: data.name, room: data.room});
 			setState(true);
 		}
+		socket.on('message', (data)=>{
+			if(typeof data == 'string'){
+				setMessage((messages) => [...messages, {message: data, id: null}]);
+			}else{
+				setMessage((messages) => [...messages, {message: data.input, id: data.id}]);
+			}
+		});
 	}, []);
 
 	useEffect(() => {
 		if(wrap.current){
 			wrap.current.scrollTop = wrap.current.scrollHeight;
 		}
-	})
+	}, [messages]);
 
 	function init(e){
 		socket.emit('join', e.target.room.value, e.target.userName.value);
-		setUserName(e.target.userName.value)
+		setUserName({name: e.target.room.value, room: e.target.userName.value});
 		setState(true);
 		sessionStorage.setItem('chatInfo', JSON.stringify({room: e.target.room.value, name: e.target.userName.value}));
 	}
@@ -39,6 +46,14 @@ function App() {
 	function disconect(){
 		sessionStorage.removeItem('chatInfo');
 		setState(false);
+	}
+
+	function sendData(e){
+		e.preventDefault();
+		socket.send({input: input, id: userName.name}, userName.room);
+		setMessage([...messages, {message: input, id: `You`}]);
+		e.target.message.value = '';
+		button.current.focus();
 	}
 
 	if(!state){
@@ -52,22 +67,6 @@ function App() {
 			</div>
 		)
 	};
-
-	function sendData(e){
-		e.preventDefault();
-		socket.send({input: input, id: userName});
-		setMessage([...messages, {message: input, id: `You`}]);
-		e.target.message.value = '';
-		button.current.focus();
-	}
-
-	socket.on('message', (data)=>{
-		if(typeof data == 'string'){
-			setMessage([...messages, {message: data, id: null}]);
-		}else{
-			setMessage([...messages, {message: data.input, id: data.id}]);
-		}
-	})
 
 	return (
 		<div className="App">
