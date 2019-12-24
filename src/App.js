@@ -9,25 +9,30 @@ function App() {
 	const [messages, setMessage] = useState([]);
 	const [state, setState]= useState(false);
 	const [userName, setUserName] = useState({});
+	const [isTyping, setIsTyping] = useState({state: false, name: null});
 	let input = '';
 	// localStorage.setItem('messages', JSON.stringify(messages));
 	const wrap = useRef(null);
 	const button = useRef(null);
 
 	useEffect(() => {
-		if(sessionStorage.getItem('chatInfo')){
-			const data = JSON.parse(sessionStorage.getItem('chatInfo'));
-			socket.emit('join', data.room, data.name);
-			setUserName({name: data.name, room: data.room});
-			setState(true);
-		}
 		socket.on('message', (data)=>{
-			if(typeof data == 'string'){
-				setMessage((messages) => [...messages, {message: data, id: null}]);
+			if(data.type === 'typing'){
+				setIsTyping({state: true, name: data.message});
+			}else if(data.type === 'connect'){
+				setMessage((messages) => [...messages, {message: data.message, id: null}]);
+			}else if(data.type === 'typing-end'){
+				setIsTyping({state: false, name: null});
 			}else{
 				setMessage((messages) => [...messages, {message: data.input, id: data.id}]);
 			}
 		});
+		if(sessionStorage.getItem('chatInfo')){
+			const data = JSON.parse(sessionStorage.getItem('chatInfo'));
+			socket.emit('join', data.room, data.name);
+			setUserName({name: data.name});
+			setState(true);
+		}
 	}, []);
 
 	useEffect(() => {
@@ -38,7 +43,7 @@ function App() {
 
 	function init(e){
 		socket.emit('join', e.target.room.value, e.target.userName.value);
-		setUserName({name: e.target.room.value, room: e.target.userName.value});
+		setUserName({name: e.target.room.value});
 		setState(true);
 		sessionStorage.setItem('chatInfo', JSON.stringify({room: e.target.room.value, name: e.target.userName.value}));
 	}
@@ -50,7 +55,7 @@ function App() {
 
 	function sendData(e){
 		e.preventDefault();
-		socket.send({input: input, id: userName.name}, userName.room);
+		socket.send({input: input, id: userName.name});
 		setMessage([...messages, {message: input, id: `You`}]);
 		e.target.message.value = '';
 		button.current.focus();
@@ -70,6 +75,7 @@ function App() {
 
 	return (
 		<div className="App">
+			<button className='disconect' onClick={disconect}>Disconnect</button>
 			<div ref={wrap} className='messages-wrap'>
 				{messages.map((item, index)=>{
 					const my = item.id === 'You';
@@ -90,10 +96,9 @@ function App() {
 			</div>
 			<div className='input'>
 				<form onSubmit={sendData}>
-					<input ref={button} name='message' placeholder='message' onChange={(e)=> {input=e.target.value;}} type='text'></input>
+					<input ref={button} name='message' placeholder={isTyping.state ? isTyping.name : 'message'} onInput={()=>socket.emit('typing', userName.name)} onChange={(e)=> {input=e.target.value;}} type='text'></input>
 					<button type='submit'>Send</button>
 				</form>
-				<button className='disconect' onClick={disconect}>Disconnect</button>
 			</div>
 		</div>
 	);
